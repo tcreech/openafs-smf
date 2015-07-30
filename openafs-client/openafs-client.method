@@ -8,10 +8,10 @@
 
 BOOLPROPS="afsdb dynroot nosettime fakestat"
 INTPROPS="stat dcache daemons volumes chunksize"
-PREFIX="/opt/bx"
-SYSCONFDIR="/etc/opt/bx"
-RAMDISK=`svcprop -p OpenAFS/ramdisk svc:/bx/network/openafs/client`
-SUID=`svcprop -p OpenAFS/suidthiscell svc:/bx/network/openafs/client`
+PREFIX="/opt/local"
+SYSCONFDIR="/opt/local/etc"
+RAMDISK=`svcprop -p OpenAFS/ramdisk svc:/network/openafs/client`
+SUID=`svcprop -p OpenAFS/suidthiscell svc:/network/openafs/client`
 
 case "$1" in
 start)
@@ -39,38 +39,61 @@ afs			65' /etc/name_to_sysnum.pre.openafs-client > /etc/name_to_sysnum
 	# Determine the right location for the kernel module and load it
 	case `/bin/isalist` in
 		*amd64* )
-			afs=/kernel/fs/amd64/afs
+			afs=/kernel/drv/amd64/afs
 			;;
 		*sparcv9* )
-			afs=/kernel/fs/sparcv9/afs
+			afs=/kernel/drv/sparcv9/afs
 			;;
 		* )
-			afs=/kernel/fs/afs
+			afs=/kernel/drv/afs
 			;;
 	esac
 
-	if [ -f $afs ]; then
-		echo "Loading AFS kernel module"
-		modload $afs
-		if [ $? -ne 0 ]; then
-			echo "Failed to load kernel module"
-			exit $SMF_EXIT_ERR_FATAL
-		fi
-	else
-		echo "$afs does not exist. skipping AFS startup"
-		exit $SMF_EXIT_ERR_CONFIG
-	fi
+    # Load AFS kernel extensions
+    if [ -f $afs ]; then
+        if [ -f /kernel/drv/afs.conf ] ; then
+            echo "Kernel afs.conf already exists"
+        else
+            echo "Creating kernel afs.conf"
+            echo 'name="afs" parent="pseudo";' > /kernel/drv/afs.conf
+        fi
+
+        # load the module
+        if grep '^afs ' /etc/name_to_major >/dev/null ; then
+            echo "Loading AFS kernel extensions"
+            modload $afs
+            # this can sometimes be necessary to get the /devices afs device to
+            # attach
+            update_drv afs
+        else
+            echo "Installing AFS driver and loading kernel extensions"
+            add_drv -m '* 0666 root root' afs
+        fi
+
+        # Create the /dev/afs link
+        if grep name=afs /etc/devlink.tab >/dev/null ; then
+            echo "Entry for afs already exists in /etc/devlink.tab"
+        else
+            echo "Adding entry for afs in /etc/devlink.tab"
+            echo "type=ddi_pseudo;name=afs;addr=0;minor=afs\t\D" >> /etc/devlink.tab
+            devfsadm
+        fi
+    else
+        echo "$afs does not exist. Skipping AFS startup."
+        echo "You may need to manually install it from $PREFIX/lib/openafs/afs."
+		exit $SMF_EXIT_ERR_FATAL
+    fi
 
 	# Set up afsd options and start the bosserver.
 	AFSDOPTIONS=
 	for opt in $BOOLPROPS; do
-		val=`svcprop -p OpenAFS/$opt svc:/bx/network/openafs/client`
+		val=`svcprop -p OpenAFS/$opt svc:/network/openafs/client`
 		if [ "$val" = true ]; then
 			AFSDOPTIONS="$AFSDOPTIONS -$opt"
 		fi
 	done
 	for opt in $INTPROPS; do
-		val=`svcprop -p OpenAFS/$opt svc:/bx/network/openafs/client`
+		val=`svcprop -p OpenAFS/$opt svc:/network/openafs/client`
 		if [ "$val" -gt 0 ]; then
 			AFSDOPTIONS="$AFSDOPTIONS -$opt $val"
 		fi

@@ -6,7 +6,7 @@
 <service_bundle type='manifest' name='openafs:client'>
 
 <service
-	name='bx/network/openafs/client'
+	name='network/openafs/client'
 	type='service'
 	version='1'>
 
@@ -26,7 +26,16 @@
 		restart_on='none'
 		type='path'>
 		    <service_fmri 
-			 value='file://localhost/opt/bx/sbin/afsd' />
+			 value='file://localhost/opt/local/sbin/afsd' />
+	</dependency> 
+
+	<dependency
+		name='clientmethod'
+		grouping='require_all'
+		restart_on='none'
+		type='path'>
+		    <service_fmri 
+             value='file://localhost/opt/local/sbin/openafs-client.method' />
 	</dependency> 
 
 	<dependency
@@ -35,7 +44,7 @@
 		restart_on='none'
 		type='path'>
 		    <service_fmri 
-			 value='file://localhost/etc/opt/bx/openafs/ThisCell' />
+             value='file://localhost/opt/local/etc/openafs/ThisCell' />
 	</dependency> 
 
 	<dependency
@@ -44,7 +53,7 @@
 		restart_on='none'
 		type='path'>
 		    <service_fmri 
-			 value='file://localhost/etc/opt/bx/openafs/CellServDB' />
+             value='file://localhost/opt/local/etc/openafs/CellServDB' />
 	</dependency>
 
 	<dependency
@@ -53,7 +62,7 @@
 		restart_on='none'
 		type='path'>
 		    <service_fmri 
-			 value='file://localhost/etc/opt/bx/openafs/cacheinfo' />
+			 value='file://localhost/opt/local/etc/openafs/cacheinfo' />
 	</dependency>
 	
 	<!--
@@ -61,6 +70,11 @@
 		is necessary so that any zones that are pseudo AFS clients
 		can see /afs
 	-->
+    <!--
+         tcreech: on OI Hipster 2015.3, this fails. There is already an
+         'optional_all' dependence on 'svc:/system/zones-monitoring', and I'm
+         guessing that the following clause only works if there are no
+         dependences already.
 	<dependent
 		name='zones'
 		grouping='require_all'
@@ -68,17 +82,18 @@
 			<service_fmri
 			   value='svc:/system/zones' />
 	</dependent>
+    -->
 
 	<exec_method
 		type='method'
 		name='start'
-		exec='/opt/bx/sbin/openafs-client.method start'
+		exec='/opt/local/sbin/openafs-client.method start'
 		timeout_seconds='300' />
 
 	<exec_method
 		type='method'
 		name='stop'
-		exec='/opt/bx/sbin/openafs-client.method stop'
+		exec='/opt/local/sbin/openafs-client.method stop'
 		timeout_seconds='60' />
 
 	<property_group name='OpenAFS' type='application'>
