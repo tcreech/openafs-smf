@@ -15,21 +15,6 @@ SUID=`svcprop -p OpenAFS/suidthiscell svc:/network/openafs/client`
 
 case "$1" in
 start)
-	#
-	# Make sure an entry for afs exists in /etc/name_to_sysnum. If not,
-	# add it and bail until the system is rebooted.
-	#
-	if grep -s "^afs" /etc/name_to_sysnum > /dev/null; then
-	    echo "Entry for afs already exists in /etc/name_to_sysnum"
-	else
-	    echo "Creating entry for afs in /etc/name_to_sysnum"
-	    cp /etc/name_to_sysnum /etc/name_to_sysnum.pre.openafs-client
-	    sed '/tasksys/i\
-afs			65' /etc/name_to_sysnum.pre.openafs-client > /etc/name_to_sysnum
-	    echo "You must reboot for the new /etc/name_to_sysnum to take effect"
-	    exit $SMF_EXIT_ERR_CONFIG
-	fi
-
 	# Check that /bin/isalist is executable
 	if [ ! -x /bin/isalist ]; then
 		echo "/bin/isalist is not executable; skipping startup"
